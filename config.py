@@ -1,12 +1,10 @@
 import os
 
-class Base:
-    SQLALCHEMY_DATABASE_URI = os.environ['DATABASE_URL']
-    SQLALCHEMY_TRACK_MODIFICATIONS = False #これ書かないとログがうるさくなる
-    TESTING = True
+from sqlalchemy import create_engine
+from sqlalchemy.orm import sessionmaker
 
-class Develop(Base):
-    DEBUG = True
+db_url = os.environ.get('DATABASE_URL', 'postgresql://srp:0000@localhost:5432/srp')
+line_token = os.environ.get('LINE_NOTIFY_ACCESS_TOKEN', None)
 
-class Product(Base):
-    DEBUG = False
+engine = create_engine(db_url, echo=False)
+Session = sessionmaker(bind=engine)
