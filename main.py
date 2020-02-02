@@ -359,7 +359,19 @@ if __name__ == '__main__':
 # initialize_stats_table()
     args = sys.argv
     if len(args) == 1:
-        routine()
+        # routine()
+        std = datetime.datetime(2020, 2, 3, 0, 20)
+        now = datetime.datetime.now()
+        sub = (now - std).seconds // 3600
+        print(now, sub)
+        q = session.query(Meet).filter_by(year=19).order_by(Meet.start).all()
+        just = sub * 50
+        target_meets = q[sub : sub+50]
+        print('長さ', len(target_meets))
+        print(f'{target_meets[0].start}の{target_meets[0].meet_id}から{target_meets[-1].start}の{target_meets[-1].meet_id}まで')
+        target_meets_ids = [m.meet_id for m in target_meets]
+        add_records(target_meets_ids)
+
     else:
         target = args[1]
         if target == 'add_meets':
