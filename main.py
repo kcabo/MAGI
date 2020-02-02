@@ -1,4 +1,5 @@
 import datetime
+import sys
 
 import sqlalchemy as db
 from sqlalchemy.orm import aliased
@@ -356,4 +357,8 @@ if __name__ == '__main__':
 # Base.metadata.drop_all(bind=engine)
 # Base.metadata.create_all(bind=engine)
 # initialize_stats_table()
-    routine(date_min=20180427)
+    args = sys.argv
+    if len(args) == 1:
+        routine()
+    else:
+        print(args)
