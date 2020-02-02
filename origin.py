@@ -456,6 +456,7 @@ def admin_with_threads(command): # 並列処理実行
                 date_min = week_ago.strftime('%Y%m%d')
                 date_max = today.strftime('%Y%m%d')
             target_meets = db.session.query(Meet).filter(Meet.start >= int(date_min), Meet.start <= int(date_max)).order_by(Meet.start).all()
+            # 古いのからやるように！！！！！
             target_meets_ids = [m.meetid for m in target_meets]
             th = threading.Thread(target=add_records, name='scraper_r', args=(target_meets_ids,))
             obj = 'add_records'
