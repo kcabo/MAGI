@@ -7,8 +7,8 @@ from bs4 import BeautifulSoup, element
 from constant import japanese_grades
 from task_manager import notify_line
 
-space_erase_table = str.maketrans("","","\n\r 　 ") # 第三引数に指定した文字が削除される。左から、LF,CR,半角スペース,全角スペース,nbsp
-space_and_nums = str.maketrans("","","\n\r 　 1234.")
+space_erase_table = str.maketrans("","","\n\r 　 *") # 第三引数に指定した文字が削除される。左から、LF,CR,半角スペース,全角スペース,nbsp
+space_and_nums = str.maketrans("","","\n\r 　 *1234.")
 
 def del_space(str):
     return str.translate(space_erase_table) if str is not None else ""
@@ -39,7 +39,7 @@ def raw_timestr_to_timeval(time_str):
 
 # DOM探索木をURLから生成
 def make_soup(url):
-    sleep(1) # 負荷軽減用
+    sleep(0.6) # 負荷軽減用
     req = requests.get(url)
     req.encoding = "cp932"
     return BeautifulSoup(req.text, "lxml")
