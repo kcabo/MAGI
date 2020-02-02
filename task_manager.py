@@ -1,6 +1,13 @@
-import os
 import requests
 from time import time
+
+# import redis
+
+from config import REDIS_URL, LINE_TOKEN
+
+# kvs = redis.from_url('redis://@localhost:6379/0', decode_responses=True)
+# kvs.set('is_busy', 0)
+
 
 class Takenoko:
     # tqdmみたいなイテレータ。要はプログレスバー
@@ -37,38 +44,29 @@ class Takenoko:
         self.current += 1
         return self.list[index]
 
-class Status:
-    path = 'memo/status'
-    def update_status(self, status):
-        with open(self.path, 'w') as f:
-            f.write(status)
-        print(f'status updated: {status}')
-
-    def free(self):
-        self.update_status('free')
-
-    def busy(self):
-        self.update_status('busy')
-
-    def get_status(self):
-        with open(self.path, 'r') as f:
-            status = f.read()
-        if status not in ['busy', 'free']:
-            raise Exception('ステータスファイルの値が無効です！')
-        return status
+# class Status:
+#     def update_status(self, status):
+#         kvs.set('is_busy', status)
+#         print(f'status updated. is_busy: {status}')
+#
+#     def free(self):
+#         self.update_status('free')
+#
+#     def busy(self):
+#         self.update_status('busy')
+#
+#     def get_status(self):
+#         with open(self.path, 'r') as f:
+#             status = f.read()
+#         if status not in ['busy', 'free']:
+#             raise Exception('ステータスファイルの値が無効です！')
+#         return status
 
 
 def notify_line(message):
     url = "https://notify-api.line.me/api/notify"
     print(message)
-    if os.name == 'nt':
-        message = '<local>' + message
-    access_token = os.environ['LINE_NOTIFY_ACCESS_TOKEN']
-    headers = {'Authorization': 'Bearer ' + access_token}
-    payload = {'message': message, 'notificationDisabled': True}
-    r = requests.post(url, headers=headers, params=payload)
-    return r
-
-status = Status()
-if __name__ == '__main__':
-    status.free()
+    if LINE_TOKEN:
+        headers = {'Authorization': 'Bearer ' + LINE_TOKEN}
+        payload = {'message': message, 'notificationDisabled': True}
+        r = requests.post(url, headers=headers, params=payload)

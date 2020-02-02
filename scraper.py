@@ -7,7 +7,6 @@ from bs4 import BeautifulSoup, element
 from constant import japanese_grades
 from task_manager import notify_line
 
-time_format_ptn = re.compile(r'([0-9]{0,2}):?([0-9]{2}).([0-9]{2})')
 space_erase_table = str.maketrans("","","\n\r 　 ") # 第三引数に指定した文字が削除される。左から、LF,CR,半角スペース,全角スペース,nbsp
 space_and_nums = str.maketrans("","","\n\r 　 1234.")
 
@@ -16,6 +15,13 @@ def del_space(str):
 
 def del_numspace(str):
     return str.translate(space_and_nums)
+
+
+time_format_ptn = re.compile(r'([0-9]{0,2}):?([0-9]{2}).([0-9]{2})')
+meet_link_ptn = re.compile(r"code=[0-9]{7}$")           # <a href="../../swims/ViewResult?h=V1000&amp;code=0119605"
+meet_caption_ptn = re.compile(r"(.+)　（(.+)） (.水路)") # 茨城:第42回県高等学校春季　（取手ｸﾞﾘｰﾝｽﾎﾟｰﾂｾﾝﾀｰ） 長水路
+event_link_ptn = re.compile(r"&code=(\d{7})&sex=(\d)&event=(\d)&distance=(\d)") # "/swims/ViewResult?h=V1100&code=0919601&sex=1&event=5&distance=4"
+
 
 def raw_timestr_to_timeval(time_str):
     if time_str in ["", "--:--.--", "-", "ｰ"]: # リレーで第一泳者以外の失格の場合--:--.--になる。最後のはハイフンではなく半角カタカナ長音
@@ -31,19 +37,13 @@ def raw_timestr_to_timeval(time_str):
             time_val = int(min)*6000 + int(ob.group(2))*100 + int(ob.group(3))
             return time_val
 
-
-meet_link_ptn = re.compile(r"code=[0-9]{7}$")           # <a href="../../swims/ViewResult?h=V1000&amp;code=0119605"
-meet_caption_ptn = re.compile(r"(.+)　（(.+)） (.水路)") # 茨城:第42回県高等学校春季　（取手ｸﾞﾘｰﾝｽﾎﾟｰﾂｾﾝﾀｰ） 長水路
-event_link_ptn = re.compile(r"&code=(\d{7})&sex=(\d)&event=(\d)&distance=(\d)") # "/swims/ViewResult?h=V1100&code=0919601&sex=1&event=5&distance=4"
-
-
-
 # DOM探索木をURLから生成
 def make_soup(url):
     sleep(1) # 負荷軽減用
     req = requests.get(url)
     req.encoding = "cp932"
     return BeautifulSoup(req.text, "lxml")
+
 
 def meet_info(meet_id):
     str_id = str(meet_id) # 整数で渡されるので6桁の場合もあるからゼロ埋め
@@ -71,7 +71,7 @@ def meet_info(meet_id):
 
 # 特定の年度・地域で開催された大会IDのリストを作成するサブルーチン
 def find_meet(year, area):
-    url = f"http://www.swim-record.com/taikai/{year}/{area}.html"
+    url = f'http://www.swim-record.com/taikai/{year}/{format(area, "02")}.html' # ゼロ埋め
     soup = make_soup(url)
     #div内での一番最初のtableが競泳大会表。特定パターンのリンクを探す
     meet_id_aTags = soup.find("div", class_ = "result_main").find("table", recursive = False).find_all("a", href = meet_link_ptn)
@@ -87,7 +87,7 @@ class Event:
         sex = int(matchOb.group(2))
         style = int(matchOb.group(3))
         distance = int(matchOb.group(4))
-        self.event = sex * 100 + style * 10 + distance
+        self.event_id = sex * 100 + style * 10 + distance
         self.is_indivisual = style <= 5 # 個人種目(自由形・背泳ぎ・平泳ぎ・バタフライ・個人メドレー)ならTrue
 
     def crawl_table(self): # 記録一覧のページの表を全部とってくる
@@ -106,7 +106,7 @@ class Event:
                 try:
                     grade = japanese_grades.index(raw_grade)
                 except ValueError:
-                    notify_line(f'無効な学年を抽出。{self.url}の{self.event}で{raw_grade}を検出。とりま-1を返しました。')
+                    notify_line(f'無効な学年を抽出。{self.url}で{raw_grade}(L={len(raw_grade)})を検出。とりま-1を返しました。')
                     grade = -1
                 time_raw = data[4].a
                 name = del_space(data[1].string)
@@ -130,7 +130,7 @@ class Event:
             relay = 0 if self.is_indivisual else 5
             # レコードインスタンスを作るのに必要な引数をまとめたタプル
             arguments_for_single_record = (
-                self.meet_id, self.event, relay, rank, name, team, grade, time_val, laps_val)
+                self.meet_id, self.event_id, relay, rank, name, team, grade, time_val, laps_val)
             set_of_args.append(arguments_for_single_record)
         return set_of_args
 
