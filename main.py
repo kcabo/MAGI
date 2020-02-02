@@ -342,7 +342,7 @@ def routine(year=None, date_min=None, date_max=None):
     if date_min is None:
         day_range = 7
         date_min_obj = today - datetime.timedelta(days=day_range)
-        date_min = int(ate_min_obj.strftime('%Y%m%d'))
+        date_min = int(date_min_obj.strftime('%Y%m%d'))
 
     # 水曜日のみ強制更新
     force = True if today.weekday() == 2 else False
