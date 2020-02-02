@@ -366,5 +366,9 @@ if __name__ == '__main__':
             add_meets(int(args[2]))
         elif target == 'routine':
             routine(date_min=int(args[2]), date_max=int(args[3]))
+        elif target == 'add':
+            session.add(Team(team_name='銀泳会'))
+            session.add(Swimmer(name='神崎伶央', grade_19=14, sex=1, awards=7))
+            session.commit()
         else:
             print(args)
