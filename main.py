@@ -7,8 +7,7 @@ import pandas as pd
 
 import scraper
 from task_manager import Takenoko, notify_line
-from config import Session, Base, engine
-session = Session()
+from config import session, Base, engine
 
 CURRENT_YEAR = 19
 

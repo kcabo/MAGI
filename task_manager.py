@@ -1,13 +1,7 @@
 import requests
 from time import time
 
-# import redis
-
 from config import REDIS_URL, LINE_TOKEN
-
-# kvs = redis.from_url('redis://@localhost:6379/0', decode_responses=True)
-# kvs.set('is_busy', 0)
-
 
 class Takenoko:
     # tqdmみたいなイテレータ。要はプログレスバー
@@ -43,25 +37,6 @@ class Takenoko:
             print(msg)
         self.current += 1
         return self.list[index]
-
-# class Status:
-#     def update_status(self, status):
-#         kvs.set('is_busy', status)
-#         print(f'status updated. is_busy: {status}')
-#
-#     def free(self):
-#         self.update_status('free')
-#
-#     def busy(self):
-#         self.update_status('busy')
-#
-#     def get_status(self):
-#         with open(self.path, 'r') as f:
-#             status = f.read()
-#         if status not in ['busy', 'free']:
-#             raise Exception('ステータスファイルの値が無効です！')
-#         return status
-
 
 def notify_line(message):
     url = "https://notify-api.line.me/api/notify"
