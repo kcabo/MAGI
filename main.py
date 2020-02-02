@@ -266,8 +266,8 @@ def add_records(target_meets_ids): # 大会IDのリストから１大会ごと�
 def add_meets(year, force=False):
     notify_line(f"大会情報の収集を開始。対象:20{year}年")
     meet_ids = []
-    for area_int in Takenoko(range(14,15)): # ローカル用
-    # for area_int in Takenoko(list(range(1, 54)) + [70,80]): # 本番用 1から53までと全国70国際80がarea番号になる
+    # for area_int in Takenoko(range(14,15)): # ローカル用
+    for area_int in Takenoko(list(range(1, 54)) + [70,80]): # 本番用 1から53までと全国70国際80がarea番号になる
         meet_ids.extend(scraper.find_meet(year, area_int))
 
     saved_meets = session.query(func.sum(Meet.meet_id)).filter_by(year=year).scalar()
@@ -361,4 +361,10 @@ if __name__ == '__main__':
     if len(args) == 1:
         routine()
     else:
-        print(args)
+        target = args[1]
+        if target == 'add_meets':
+            add_meets(int(args[2]))
+        elif target == 'routine':
+            routine(date_min=int(args[2]), date_max=int(args[3]))
+        else:
+            print(args)
