@@ -106,7 +106,7 @@ class Event:
                 try:
                     grade = japanese_grades.index(raw_grade)
                 except ValueError:
-                    notify_line(f'無効な学年を抽出。{self.url}で{raw_grade}(L={len(raw_grade)})を検出。とりま-1を返しました。')
+                    notify_line(f'無効な学年を抽出。{self.url} で{raw_grade}(L={len(raw_grade)})を検出。とりま-1を返しました。')
                     grade = -1
                 time_raw = data[4].a
                 name = del_space(data[1].string)
