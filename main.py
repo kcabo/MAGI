@@ -360,7 +360,7 @@ if __name__ == '__main__':
     args = sys.argv
     if len(args) == 1:
         # routine()
-        std = datetime.datetime(2020, 2, 5, 3, 0)
+        std = datetime.datetime(2020, 2, 5, 3, 30)
         now = datetime.datetime.now()
         sub = (now - std).seconds // 3600
         print(now, sub)
