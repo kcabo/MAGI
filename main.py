@@ -3,7 +3,7 @@ import sys
 
 import sqlalchemy as db
 from sqlalchemy.orm import aliased
-from sqlalchemy import func
+from sqlalchemy import func, desc
 import pandas as pd
 
 import scraper
@@ -360,14 +360,14 @@ if __name__ == '__main__':
     args = sys.argv
     if len(args) == 1:
         # routine()
-        std = datetime.datetime(2020, 2, 5, 3, 30)
+        std = datetime.datetime(2020, 2, 6, 7, 0)
         now = datetime.datetime.now()
         sub = (now - std).seconds // 3600
         print(now, sub)
 
-        q = session.query(Meet).filter(Meet.year==19, Meet.start > 20190901).order_by(Meet.start, Meet.meet_id).all()
-        min = sub * 30
-        max = (sub+1) * 30
+        q = session.query(Meet).filter(Meet.year<19).order_by(desc(Meet.start), desc(Meet.meet_id)).all()
+        min = sub * 25
+        max = (sub+1) * 25
         target_meets = q[min : max]
         print(f'{target_meets[0].start}の{target_meets[0].meet_id}から{target_meets[-1].start}の{target_meets[-1].meet_id}まで')
         target_meets_ids = [m.meet_id for m in target_meets]
@@ -379,5 +379,7 @@ if __name__ == '__main__':
             add_meets(int(args[2]))
         elif target == 'routine':
             routine(date_min=int(args[2]), date_max=int(args[3]))
+        elif target == 'amari':
+            routine(date_min=20200112, date_max=20200119)
         else:
             print(args)
