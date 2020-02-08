@@ -360,12 +360,12 @@ if __name__ == '__main__':
     args = sys.argv
     if len(args) == 1:
         # routine()
-        std = datetime.datetime(2020, 2, 6, 7, 0)
+        std = datetime.datetime(2020, 2, 8, 16, 30)
         now = datetime.datetime.now()
-        sub = (now - std).seconds // 3600
+        sub = (now - std).seconds // 3600 + (now - std).days * 24
         print(now, sub)
 
-        q = session.query(Meet).filter(Meet.year<19).order_by(desc(Meet.start), desc(Meet.meet_id)).all()
+        q = session.query(Meet).filter(Meet.year<19, Meet.start < 20180902).order_by(desc(Meet.start), desc(Meet.meet_id)).all()
         min = sub * 25
         max = (sub+1) * 25
         target_meets = q[min : max]
