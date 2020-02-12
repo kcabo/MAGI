@@ -64,8 +64,10 @@ class Record(Base): # 個人種目とリレーの記録
             self.swimmer_id = match.swimmer_id
             # もともとの性別が混合3であり、かつこの種目が混合じゃないなら性別情報を修正
             if match.sex == 3 and (sex := self.event // 100) != 3:
-                print('性別情報を修正',sex, self.swimmer_id, match)
-                match.sex = sex
+                update = session.query(Swimmer).get(self.swimmer_id)
+                print('性別情報を修正',update)
+                update.sex = sex
+                session.commit()
 
         # しかし運悪く見つからず、その年で初めて出場する場合
         elif same_names := session.query(Swimmer).filter(
