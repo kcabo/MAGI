@@ -39,7 +39,7 @@ def raw_timestr_to_timeval(time_str):
 
 # DOM探索木をURLから生成
 def make_soup(url):
-    sleep(0.6) # 負荷軽減用
+    sleep(0.8) # 負荷軽減用
     req = requests.get(url)
     req.encoding = "cp932"
     return BeautifulSoup(req.text, "lxml")
@@ -75,7 +75,7 @@ def find_meet(year, area):
     soup = make_soup(url)
     #div内での一番最初のtableが競泳大会表。特定パターンのリンクを探す
     meet_id_aTags = soup.find("div", class_ = "result_main").find("table", recursive = False).find_all("a", href = meet_link_ptn)
-    id_list = [int(a["href"][-7:]) for a in meet_id_aTags] # 大会コード七桁を抽出し整数に変換
+    id_list = [int(a["href"][-7:]) for a in meet_id_aTags] # 大会コード七桁を検出し整数に変換
     return id_list
 
 
@@ -90,12 +90,14 @@ class Event:
         self.event_id = sex * 100 + style * 10 + distance
         self.is_indivisual = style <= 5 # 個人種目(自由形・背泳ぎ・平泳ぎ・バタフライ・個人メドレー)ならTrue
 
-    def crawl_table(self): # 記録一覧のページの表を全部とってくる
+    def crawl(self): # 自身のアトリビュートに記録の一覧をセット
         soup = make_soup(self.url)
-        rows = soup.find_all("tr", align = "center", bgcolor = False)       # 中央寄せでbgcolorの引数を持たない= レコード行
-        lap_tables = soup.find_all("tr", align = "right", id = True, style = True) # それぞれのtr内にLAPSテーブルが格納されている
+        self.rows = soup.find_all("tr", align = "center", bgcolor = False)       # 中央寄せでbgcolorの引数を持たない= レコード行
+        self.lap_tables = soup.find_all("tr", align = "right", id = True, style = True) # それぞれのtr内にLAPSテーブルが格納されている
+
+    def parse_table(self): # 記録一覧のページの表を全部とってくる
         set_of_args = []
-        for row, lap_table in zip(rows, lap_tables):
+        for row, lap_table in zip(self.rows, self.lap_tables):
             data = row.find_all("td") # 一行の中に複数のtd(順位、氏名…)(リレーと個人で異なる)が格納されている
             laps_raw = lap_table.find_all("td", width = True) # タイムの書かれたtdのみがwidthの引数を持つ
             laps = [del_space(l.string) for l in laps_raw] # タグを取り除いて空白も削除
@@ -106,7 +108,7 @@ class Event:
                 try:
                     grade = japanese_grades.index(raw_grade)
                 except ValueError:
-                    notify_line(f'無効な学年を抽出。{self.url} で{raw_grade}(L={len(raw_grade)})を検出。とりま-1を返しました。')
+                    notify_line(f'無効な学年を検出。{self.url} で{raw_grade}(L={len(raw_grade)})を検出。とりま-1を返しました。')
                     grade = -1
                 time_raw = data[4].a
                 name = del_space(data[1].string)
@@ -145,4 +147,5 @@ def result_links_in_meet_page(meet_id):
 def all_events(meet_id):
     # 大会IDを指定し、そこから全開催種目を抜き出す。そしてそれらをEventインスタンスにする
     # つまりひとつの大会内での全種目の情報を返す
-    return [Event(link) for link in result_links_in_meet_page(meet_id)]
+    event_links = result_links_in_meet_page(meet_id)
+    return [Event(link) for link in event_links]
