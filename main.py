@@ -65,7 +65,6 @@ class Record(Base): # 個人種目とリレーの記録
             # もともとの性別が混合3であり、かつこの種目が混合じゃないなら性別情報を修正
             if match.sex == 3 and (sex := self.event // 100) != 3:
                 update = session.query(Swimmer).get(self.swimmer_id)
-                print('性別情報を修正',update)
                 update.sex = sex
                 session.commit()
 
@@ -241,21 +240,20 @@ def analyze_all(year):
     notify_line('全記録の分析を完了')
 
 
-
-
 def add_records(target_meets_ids): # 大会IDのリストから１大会ごとにRecordの行を生成しDBに追加
-    notify_line(f"{len(target_meets_ids)}の大会の全記録の抽出開始")
+    notify_line(f"{len(target_meets_ids)}の大会の全記録の検出開始")
     record_length = 0
     erased = 0
 
     for meet_id in Takenoko(target_meets_ids, 20):
-        events_array = scraper.all_events(meet_id)
-        for event in events_array:
-            records = [Record(*args) for args in event.crawl_table()]
-            total_time = sum([r.time for r in records])
-            current_total_time = session.query(func.sum(Record.time)).filter_by(meet_id=event.meet_id, event=event.event_id).scalar()
-            if total_time != current_total_time: # タイムの合計が一致してたらわざわざ削除してセットし直すこともない
+        events_list = scraper.all_events(meet_id)
+        for event in events_list:
+            event.crawl()
+            # 同じ大会の同じEventの記録はいくつ既にDBにあるか
+            records_count_in_event = session.query(func.count(Record.record_id)).filter_by(meet_id=event.meet_id, event=event.event_id).scalar()
+            if records_count_in_event != len(event.rows): # 記録数が一致していなかったら削除して登録し直し
                 erased += session.query(Record).filter_by(meet_id=event.meet_id, event=event.event_id).delete()
+                records = [Record(*args) for args in event.parse_table()]
                 for rc in records:
                     rc.set_team()
                     rc.set_swimmer()
