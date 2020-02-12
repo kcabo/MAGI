@@ -360,17 +360,29 @@ if __name__ == '__main__':
     args = sys.argv
     if len(args) == 1:
         # routine()
-        std = datetime.datetime(2020, 2, 10, 1, 44)
-        now = datetime.datetime.now()
-        sub = (now - std).seconds // 3600 + (now - std).days * 24
-        print(now, sub)
+        # std = datetime.datetime(2020, 2, 10, 1, 44)
+        # now = datetime.datetime.now()
+        # sub = (now - std).seconds // 3600 + (now - std).days * 24
+        # print(now, sub)
+        #
+        # q = session.query(Meet).filter(Meet.year==17).order_by(desc(Meet.start), desc(Meet.meet_id)).all()
+        # min = sub * 22
+        # max = (sub+1) * 22
+        # target_meets = q[min : max]
+        # print(f'{target_meets[0].start}の{target_meets[0].meet_id}から{target_meets[-1].start}の{target_meets[-1].meet_id}まで')
+        # target_meets_ids = [m.meet_id for m in target_meets]
+        # add_records(target_meets_ids)
 
-        q = session.query(Meet).filter(Meet.year==17).order_by(desc(Meet.start), desc(Meet.meet_id)).all()
-        min = sub * 22
-        max = (sub+1) * 22
-        target_meets = q[min : max]
-        print(f'{target_meets[0].start}の{target_meets[0].meet_id}から{target_meets[-1].start}の{target_meets[-1].meet_id}まで')
-        target_meets_ids = [m.meet_id for m in target_meets]
+        target_meets_ids = [4317624,4817401,1517222,3217603,217618,
+        2417602,217204,1317614,3317501,2117602,2617301,917621,217625,
+        2217741,2417684,4317645,2717633,3517705,1817311,1017607,3917603,
+        1917661,3417693,4717714,1017609,4517601,1117606,2117624,817626,
+        417301,4017631,2417628,2217739,2717634,817605,4917403,3517751,
+        2517602,917704,1217631,2817307,2217503,1517756,2117695,2417605,1517709,
+        4717705,817704,5317401,1717333,4617604,4617603,4517705,1117904,217729,2117204,
+        2817601,2117625,2817205,2817616,1017606,2217740,1517759,2517201,2117651,617606,
+        2217751,2917624,4417703,2417607,2217625]
+
         add_records(target_meets_ids)
 
     else:
