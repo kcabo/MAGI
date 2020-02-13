@@ -247,7 +247,7 @@ def add_records(target_meets_ids): # 大会IDのリストから１大会ごと�
     skipped = 0
     events_count = 0
 
-    for meet_id in Takenoko(target_meets_ids, 20):
+    for meet_id in Takenoko(target_meets_ids, 50):
         events_list = scraper.all_events(meet_id)
         events_count += (sub_total := len(events_list))
 
@@ -272,7 +272,7 @@ def add_records(target_meets_ids): # 大会IDのリストから１大会ごと�
 
 
 def add_meets(year, force=False):
-    notify_line(f"大会情報の収集を開始。対象:20{year}年")
+    notify_line(f"各地域の大会情報の収集を開始。対象:20{year}年")
     meet_ids = []
     # for area_int in Takenoko(range(14,15)): # ローカル用
     for area_int in Takenoko(list(range(1, 54)) + [70,80]): # 本番用 1から53までと全国70国際80がarea番号になる
