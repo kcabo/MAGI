@@ -249,9 +249,11 @@ def add_records(target_meets_ids): # 大会IDのリストから１大会ごと�
 
     for meet_id in Takenoko(target_meets_ids, 20):
         events_list = scraper.all_events(meet_id)
+        events_count += (sub_total := len(events_list))
+
         for event in events_list:
             event.crawl()
-            events_count += 1
+            print(f'{event.event_id} / {sub_total} in {event.meet_id}')
             # 同じ大会の同じEventの記録はいくつ既にDBにあるか
             records_count_in_event = session.query(func.count(Record.record_id)).filter_by(meet_id=event.meet_id, event=event.event_id).scalar()
             if records_count_in_event != len(event.rows): # 記録数が一致していなかったら削除して登録し直し
