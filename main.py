@@ -252,6 +252,7 @@ def add_records(target_meets_ids): # 大会IDのリストから１大会ごと�
         for event in events_list:
             event.crawl()
             events_count += 1
+            print(f'\r{event.event_id} in {event.meet_id}', end='') #フラッシュ表示上書き
             # 同じ大会の同じEventの記録はいくつ既にDBにあるか
             records_count_in_event = session.query(func.count(Record.record_id)).filter_by(meet_id=event.meet_id, event=event.event_id).scalar()
             if records_count_in_event != len(event.rows): # 記録数が一致していなかったら削除して登録し直し
