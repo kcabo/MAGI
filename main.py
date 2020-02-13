@@ -251,12 +251,14 @@ def add_records(target_meets_ids): # 大会IDのリストから１大会ごと�
         events_list = scraper.all_events(meet_id)
         events_count += (sub_total := len(events_list))
 
+        # 同じ大会記録はいくつ既にDBにあるか
+        existing_records_in_meet = session.query(Record.event_id).filter_by(meet_id=meet_id).all()
+        event_id_list = [e.event_id for e in existing_records_in_meet]
+
         for event in events_list:
             event.crawl()
             print(f'{event.event_id} / {sub_total} in {event.meet_id}')
-            # 同じ大会の同じEventの記録はいくつ既にDBにあるか
-            records_count_in_event = session.query(func.count(Record.record_id)).filter_by(meet_id=event.meet_id, event=event.event_id).scalar()
-            if records_count_in_event != len(event.rows): # 記録数が一致していなかったら削除して登録し直し
+            if event_id_list.count(event.event_id) != len(event.rows): # 記録数が一致していなかったら削除して登録し直し
                 erased += session.query(Record).filter_by(meet_id=event.meet_id, event=event.event_id).delete()
                 records = [Record(*args) for args in event.parse_table()]
                 for rc in records:
