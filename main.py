@@ -241,14 +241,17 @@ def analyze_all(year):
 
 
 def add_records(target_meets_ids): # 大会IDのリストから１大会ごとにRecordの行を生成しDBに追加
-    notify_line(f"{len(target_meets_ids)}の大会の全記録の検出開始")
+    notify_line(f"{target_meets_ids[0]}から{target_meets_ids[-1]}までの{len(target_meets_ids)}の大会の全記録の検出開始")
     record_length = 0
     erased = 0
+    skipped = 0
+    events_count = 0
 
     for meet_id in Takenoko(target_meets_ids, 20):
         events_list = scraper.all_events(meet_id)
         for event in events_list:
             event.crawl()
+            events_count += 1
             # 同じ大会の同じEventの記録はいくつ既にDBにあるか
             records_count_in_event = session.query(func.count(Record.record_id)).filter_by(meet_id=event.meet_id, event=event.event_id).scalar()
             if records_count_in_event != len(event.rows): # 記録数が一致していなかったら削除して登録し直し
@@ -260,8 +263,10 @@ def add_records(target_meets_ids): # 大会IDのリストから１大会ごと�
                 session.add_all(records)
                 record_length += len(records)
                 session.commit()
+            else:
+                skipped += 1
 
-    notify_line(f'{erased}件を削除 {record_length}件を新規に保存 現在：{format(count_records(), ",")}件')
+    notify_line(f'{erased}件を削除 {record_length}件を新規に保存 現在：{format(count_records(), ",")}件\n{events_count}種目中{skipped}をスキップ')
 
 
 def add_meets(year, force=False):
