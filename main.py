@@ -242,23 +242,23 @@ def analyze_all(year):
 
 def add_records(target_meets_ids): # 大会IDのリストから１大会ごとにRecordの行を生成しDBに追加
     notify_line(f"{target_meets_ids[0]}から{target_meets_ids[-1]}までの{len(target_meets_ids)}の大会の全記録をセット")
-    record_length = 0
-    erased = 0
-    skipped = 0
-    events_count = 0
+    record_length = 0 # 追加した行数
+    erased = 0 # 削除した行数
+    skipped = 0 # 飛ばした種目数
+    events_count = 0 # 対象の種目数
 
     for meet_id in Takenoko(target_meets_ids, 50):
-        events_list = scraper.all_events(meet_id)
+        events_list = scraper.all_events(meet_id) # Eventインスタンスのリスト
         events_count += (sub_total := len(events_list))
 
-        # 同じ大会記録はいくつ既にDBにあるか
-        existing_records_in_meet = session.query(Record.event_id).filter_by(meet_id=meet_id).all()
-        event_id_list = [e.event_id for e in existing_records_in_meet]
+        # 既にDBにある同一大会IDの記録を抽出し、それぞれの種目IDが何行あるかを調べる
+        existing_records_in_meet = session.query(Record.event).filter_by(meet_id=meet_id).all()
+        existing_event_id_list = [e.event for e in existing_records_in_meet]
 
         for event in events_list:
             event.crawl()
             print(f'{event.event_id} / {sub_total} in {event.meet_id}')
-            if event_id_list.count(event.event_id) != len(event.rows): # 記録数が一致していなかったら削除して登録し直し
+            if existing_event_id_list.count(event.event_id) != len(event.rows): # 記録数が一致していなかったら削除して登録し直し
                 erased += session.query(Record).filter_by(meet_id=event.meet_id, event=event.event_id).delete()
                 records = [Record(*args) for args in event.parse_table()]
                 for rc in records:
