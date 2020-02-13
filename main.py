@@ -383,7 +383,7 @@ if __name__ == '__main__':
         # target_meets_ids = [m.meet_id for m in target_meets]
         # add_records(target_meets_ids)
 
-        q = session.query(Meet).filter(Meet.year==17).order_by(Meet.start, Meet.meet_id).all()
+        q = session.query(Meet).filter(Meet.year==18).order_by(Meet.start, Meet.meet_id).all()
         target_meets_ids = [m.meet_id for m in q]
 
         # target_meets_ids = [2817718,2417701,3817713,417706,3917791,4617701,1217101,3217604,3617702,2217743,
