@@ -252,6 +252,7 @@ def add_records(target_meets_ids): # 大会IDのリストから１大会ごと�
         events_count += (sub_total := len(events_list))
 
         # 既にDBにある同一大会IDの記録を抽出し、それぞれの種目IDが何行あるかを調べる
+        # しかしこれでは記録数変わらずに記録の中身（タイムが空白からアップデートされたとき）に対応できない
         existing_records_in_meet = session.query(Record.event).filter_by(meet_id=meet_id).all()
         existing_event_id_list = [e.event for e in existing_records_in_meet]
 
@@ -324,6 +325,21 @@ def initialize_stats_table():
                     session.add(Stats(pool=pool, event=event, grade=grade))
     session.commit()
 
+def delete_no_time_records(target_meets_ids):
+    # select records.meet_id, meets.start, sum(records.time) from records, meets where records.meet_id = meets.meet_id and meets.start > 20200000 group by records.meet_id, meets.start order by meets.start;
+    q = session.query(
+            Record.meet_id,
+            func.sum(Record.time)
+        ).filter(
+            Record.meet_id == Meet.meet_id,
+            Meet.meet_id.in_(target_meets_ids)
+        ).groupby(
+            Record.meet_id
+        ).order_by(
+            Meet.start,
+            Meet.meet_id
+        )
+
 def add_records_wrapper(date_min, date_max):
     target_meets = session.query(
             Meet.meet_id
@@ -334,6 +350,7 @@ def add_records_wrapper(date_min, date_max):
             Meet.start
         ).all()
     target_meets_ids = [m.meet_id for m in target_meets]
+
     add_records(target_meets_ids)
 
 def routine(year=None, date_min=None, date_max=None):
@@ -369,33 +386,7 @@ if __name__ == '__main__':
 # initialize_stats_table()
     args = sys.argv
     if len(args) == 1:
-        # routine()
-        # std = datetime.datetime(2020, 2, 10, 1, 44)
-        # now = datetime.datetime.now()
-        # sub = (now - std).seconds // 3600 + (now - std).days * 24
-        # print(now, sub)
-        #
-        # q = session.query(Meet).filter(Meet.year==17).order_by(desc(Meet.start), desc(Meet.meet_id)).all()
-        # min = sub * 22
-        # max = (sub+1) * 22
-        # target_meets = q[min : max]
-        # print(f'{target_meets[0].start}の{target_meets[0].meet_id}から{target_meets[-1].start}の{target_meets[-1].meet_id}まで')
-        # target_meets_ids = [m.meet_id for m in target_meets]
-        # add_records(target_meets_ids)
-
-        q = session.query(Meet).filter(Meet.year==18, Meet.start>20180723).order_by(Meet.start, Meet.meet_id).all()
-        target_meets_ids = [m.meet_id for m in q]
-
-        add_records(target_meets_ids)
-
-
-        q = session.query(Meet).filter(Meet.year==19, Meet.start<=20200210).order_by(Meet.start, Meet.meet_id).all()
-        target_meets_ids = [m.meet_id for m in q]
-
-        add_records(target_meets_ids)
-
         routine()
-
     else:
         target = args[1]
         if target == 'meets':
