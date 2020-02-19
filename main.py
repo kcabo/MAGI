@@ -249,7 +249,7 @@ def add_records(target_meets_ids): # 大会IDのリストから１大会ごと�
     skipped = 0 # 飛ばした種目数
     events_count = 0 # 対象の種目数
 
-    for meet_id in Takenoko(target_meets_ids, 50):
+    for meet_id in Takenoko(target_meets_ids):
         events_list = scraper.all_events(meet_id) # Eventインスタンスのリスト
         events_count += (sub_total := len(events_list))
 
@@ -358,13 +358,114 @@ def add_records_wrapper(date_min, date_max):
             Meet.start
         ).all()
     target_meets_ids = [m.meet_id for m in target_meets]
-    not_up_to_date = imperfect_meets(target_meets_ids)
-    count = session.query(Record).filter(Record.meet_id.in_(not_up_to_date)).delete(synchronize_session = False)
-    session.commit()
-    if count:
+    if not_up_to_date := imperfect_meets(target_meets_ids):
+        count = session.query(Record).filter(Record.meet_id.in_(not_up_to_date)).delete(synchronize_session = False)
+        session.commit()
         notify_line(f'大会ID:{not_up_to_date}、記録未納の可能性あり。{count}件の記録を削除')
-
+    # この時点でスクレイピングが必要な大会がわかるから、既にデータを追加した大会をtargetから省いてもいいのでは？
     add_records(target_meets_ids)
+
+
+def add_first_swimmer_in_relay(target_meets_ids):
+    # 対象大会内のレコードに一つも1泳者のレコード（relay=1）がなかったらまだ未追加
+    notify_line(f"リレー第一泳者の記録の追加を開始")
+    record_length = 0 # 追加した行数
+    skipped = 0 # 飛ばした種目数
+
+    for meet_id in Takenoko(target_meets_ids):
+        first_swimmers = session.query(Record.record_id).filter_by(meet_id=meet_id, relay=1).all()
+        if first_swimmers:
+            skipped += 1 # その大会においては既に1泳者追加していた
+        else:
+            relay_results = session.query(
+                    Record.record_id,
+                    Record.event,
+                    Swimmer.name,
+                    Record.rank,
+                    Record.team_id,
+                    Record.laps
+                ).filter(
+                    Record.meet_id == meet_id,
+                    Record.swimmer_id == Swimmer.swimmer_id,
+                    Record.relay == 5,
+                    ~Record.rank.in_(['失格','失格1泳者','棄権','途中棄権'])
+                    # 2~4泳者の失格はよい あと失格、は誰が失格なのかわからないから一応除外
+                ).all()
+
+            for relay in relay_results:
+                swimmers = relay.name.split(',')
+                assert len(swimmers) == 4
+                first = swimmers[0]
+                # とりあえず同じ名前の人探す
+                candidates = session.query(Swimmer.swimmer_id).filter_by(name=first).all()
+
+                if candidates:
+                    # 同一大会内の個人種目でその人が出場しているか
+                    candidates_in_same_meet = session.query(
+                            Record.swimmer_id
+                        ).filter(
+                            Record.meet_id == meet_id,
+                            Record.swimmer_id.in_([c.swimmer_id for c in candidates])
+                        ).distinct(
+                            Record.swimmer_id # 同姓同名の選手が同じ大会に出場していたらオワオワリ
+                        ).all()
+                    suggest_s_ids = [s.swimmer_id for s in candidates_in_same_meet]
+
+                    if (length := len(suggest_s_ids)) == 1:
+                        # これは特定余裕 同じ大会内で同じ名前の選手が一人だけいた
+                        record_length += add_row_for_relay(relay, meet_id, suggest_s_ids[0])
+
+                    elif length == 0:
+                        # 同一大会で出場なし
+                        if len(candidates) == 1:
+                            record_length += add_row_for_relay(relay, meet_id, candidates[0])
+                            notify_line(f'リレーのみ出場の選手でしたが、{first}には同姓同名がいないため{relay.record_id}の第一泳者の記録追加')
+                        else:
+                            notify_line(f'この大会でリレーのみ出場の{first}には同姓同名がいます。{relay.record_id}の第一泳者を特定できません')
+                    else:
+                        # 同姓同名が同一大会で出場したため、リレー一泳が誰か特定不可
+                        notify_line(f'{first}が{meet_id}において二人います。{relay.record_id}の第一泳者を特定できません')
+
+                else: # 同じ名前の人がSwimmerテーブルに存在しない
+                    notify_line(f'{first}がテーブルに存在しません。{relay.record_id}の第一泳者を特定できません')
+
+            session.commit()
+
+    notify_line(f'{record_length}件の第一泳者の記録を新規に保存。{skipped}大会をスキップ')
+
+def add_row_for_relay(relay, meet_id, swimmer_id):
+    event = convert_relay_event(relay.event)
+    laps_list = relay.laps.split(',')
+    if (lap_len:=len(laps_list) < 4:
+        notify_line(f'{relay.record_id}の第一泳者のタイムを特定できません')
+        return 0
+    else:
+        assert lap_len % 4 == 0
+        first_range = lap_len / 4
+        first_laps = laps_list[:first_range]
+        time = int(first_laps[-1]) # 最後の一つが１泳の正式タイム
+        laps = ','.join(first_laps)
+        first_result = Record(meet_id=meet_id, event=event, relay=1, rank=relay.rank, name='', team='',time=time, laps=laps)
+        first_result.swimmer_id = swimmer_id
+        first_result.team_id = relay.team_id
+        session.add(first_result)
+        return 1
+
+def convert_relay_event(event):
+    sex = event // 100
+    relay_style = (event // 10) % 10
+    relay_distance = event % 10
+
+    if relay_style == 6: #FR
+        style = 1
+    elif relay_style == 7: #MR
+        style = 2
+
+    if 3 <= relay_distance <= 6:
+        distance = relay_distance - 2
+
+    return sex*100 + style*10 + distance
+
 
 def routine(year=None, date_min=None, date_max=None):
     today = datetime.date.today()
@@ -395,7 +496,8 @@ if __name__ == '__main__':
 # ::initialize_stats_table()
     args = sys.argv
     if len(args) == 1:
-        routine()
+        # routine()
+        # print(convert_relay_event(178))
     else:
         target = args[1]
         if target == 'meets':
