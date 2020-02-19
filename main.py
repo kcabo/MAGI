@@ -95,7 +95,8 @@ class Record(Base): # 個人種目とリレーの記録
             self.add_swimmer(year)
 
     def add_swimmer(self, year):
-        new_swimmer = Swimmer(name=self.name, sex=self.event // 100)
+        # リレーの全体記録ならis_indivが偽
+        new_swimmer = Swimmer(name=self.name, sex=self.event // 100, is_indiv=False if self.relay == 5 else True)
         setattr(new_swimmer, f'grade_{year}', self.grade)
         session.add(new_swimmer)
         session.flush()
@@ -140,6 +141,7 @@ class Swimmer(Base):
     grade_19 = db.Column(db.Integer)
     grade_20 = db.Column(db.Integer)
     grade_21 = db.Column(db.Integer)
+    is_indiv = db.Column(db.Boolean)
 
 
 class Team(Base):
