@@ -97,7 +97,8 @@ class Record(Base): # 個人種目とリレーの記録
     def add_swimmer(self, year):
         # リレーの全体記録ならis_indivが偽
         new_swimmer = Swimmer(name=self.name, sex=self.event // 100, is_indiv=False if self.relay == 5 else True)
-        setattr(new_swimmer, f'grade_{year}', self.grade)
+        if new_swimmer.is_indiv:
+            setattr(new_swimmer, f'grade_{year}', self.grade)
         session.add(new_swimmer)
         session.flush()
         self.swimmer_id = new_swimmer.swimmer_id
@@ -377,6 +378,7 @@ def add_first_swimmer_in_relay(target_meets_ids):
         if first_swimmers:
             skipped += 1 # その大会においては既に1泳者追加していた
         else:
+            only_relay_but_add = []
             relay_results = session.query(
                     Record.record_id,
                     Record.event,
@@ -419,7 +421,7 @@ def add_first_swimmer_in_relay(target_meets_ids):
                         # 同一大会で出場なし
                         if len(candidates) == 1:
                             record_length += add_row_for_relay(relay, meet_id, candidates[0])
-                            notify_line(f'リレーのみ出場の選手でしたが、{first}には同姓同名がいないため{relay.record_id}の第一泳者の記録追加')
+                            only_relay_but_add.append(f'{first}, {relay.record_id}')
                         else:
                             notify_line(f'この大会でリレーのみ出場の{first}には同姓同名がいます。{relay.record_id}の第一泳者を特定できません')
                     else:
@@ -429,6 +431,8 @@ def add_first_swimmer_in_relay(target_meets_ids):
                 else: # 同じ名前の人がSwimmerテーブルに存在しない
                     notify_line(f'{first}がテーブルに存在しません。{relay.record_id}の第一泳者を特定できません')
 
+            msg = ' '.join(only_relay_but_add)
+            notify_line(f'{meet_id}において、リレーのみ出場の選手かつ同姓同名なしで問題なしとしたのが以下。{msg}')
             session.commit()
 
     notify_line(f'{record_length}件の第一泳者の記録を新規に保存。{skipped}大会をスキップ')
@@ -441,11 +445,11 @@ def add_row_for_relay(relay, meet_id, swimmer_id):
         return 0
     else:
         assert lap_len % 4 == 0
-        first_range = lap_len / 4
+        first_range = lap_len // 4
         first_laps = laps_list[:first_range]
         time = int(first_laps[-1]) # 最後の一つが１泳の正式タイム
         laps = ','.join(first_laps)
-        first_result = Record(meet_id=meet_id, event=event, relay=1, rank=relay.rank, name='', team='',time=time, laps=laps)
+        first_result = Record(meet_id=meet_id, event=event, relay=1, rank=relay.rank, name='', team='', grade=0, time=time, laps=laps)
         first_result.swimmer_id = swimmer_id
         first_result.team_id = relay.team_id
         session.add(first_result)
@@ -497,6 +501,7 @@ if __name__ == '__main__':
     args = sys.argv
     if len(args) == 1:
         routine()
+        # add_first_swimmer_in_relay([1418201])
         # print(convert_relay_event(178))
     else:
         target = args[1]
