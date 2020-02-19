@@ -260,7 +260,7 @@ def add_records(target_meets_ids): # 大会IDのリストから１大会ごと�
 
         for event in events_list:
             event.crawl()
-            print(f'{event.event_id} / {sub_total} in {event.meet_id}')
+            # print(f'{event.event_id} / {sub_total} in {event.meet_id}')
             if existing_event_id_list.count(event.event_id) != len(event.rows): # 記録数が一致していなかったら削除して登録し直し
                 erased += session.query(Record).filter_by(meet_id=event.meet_id, event=event.event_id).delete()
                 records = [Record(*args) for args in event.parse_table()]
