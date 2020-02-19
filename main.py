@@ -477,7 +477,7 @@ def routine(year=None, date_min=None, date_max=None):
         date_max = int(today.strftime('%Y%m%d'))
 
     if date_min is None:
-        day_range = 7
+        day_range = 10
         date_min_obj = today - datetime.timedelta(days=day_range)
         date_min = int(date_min_obj.strftime('%Y%m%d'))
 
