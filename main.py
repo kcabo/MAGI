@@ -241,7 +241,7 @@ def analyze_all(year):
 
 
 def add_records(target_meets_ids): # 大会IDのリストから１大会ごとにRecordの行を生成しDBに追加
-    notify_line(f"{target_meets_ids[0]}から{target_meets_ids[-1]}までの{len(target_meets_ids)}の大会の全記録をセット")
+    notify_line(f"目標大会をセット。{target_meets_ids[0]}から{target_meets_ids[-1]}。{len(target_meets_ids)}大会の全記録調査開始")
     record_length = 0 # 追加した行数
     erased = 0 # 削除した行数
     skipped = 0 # 飛ばした種目数
@@ -325,20 +325,26 @@ def initialize_stats_table():
                     session.add(Stats(pool=pool, event=event, grade=grade))
     session.commit()
 
-def delete_no_time_records(target_meets_ids):
-    # select records.meet_id, meets.start, sum(records.time) from records, meets where records.meet_id = meets.meet_id and meets.start > 20200000 group by records.meet_id, meets.start order by meets.start;
+def imperfect_meets(target_meets_ids):
+    # 予選種目だけ既に追加されていて、決勝種目がhtml上にない場合がある
+    # 開催種目内に1種目でもタイム合計値が0の種目がある場合、当該大会はまだ結果をアップし終わってないとする
     q = session.query(
             Record.meet_id,
-            func.sum(Record.time)
+            # Record.event,
         ).filter(
             Record.meet_id == Meet.meet_id,
-            Meet.meet_id.in_(target_meets_ids)
-        ).groupby(
+            Meet.meet_id.in_(target_meets_ids),
+            ~Record.rank.in_(['失格','失格1泳者','失格2泳者','失格3泳者','失格4泳者','棄権','途中棄権'])
+        ).group_by(
+            Record.meet_id,
+            Record.event
+        ).having(
+            func.sum(Record.time) == 0
+        ).distinct(
             Record.meet_id
-        ).order_by(
-            Meet.start,
-            Meet.meet_id
-        )
+        ).all()
+
+    return [rc.meet_id for rc in q]
 
 def add_records_wrapper(date_min, date_max):
     target_meets = session.query(
@@ -350,14 +356,15 @@ def add_records_wrapper(date_min, date_max):
             Meet.start
         ).all()
     target_meets_ids = [m.meet_id for m in target_meets]
+    not_up_to_date = imperfect_meets(target_meets_ids)
+    count = session.query(Record).filter(Record.meet_id.in_(not_up_to_date)).delete(synchronize_session = False)
+    session.commit()
+    if count:
+        notify_line(f'大会ID:{not_up_to_date}、記録未納の可能性あり。{count}件の記録を削除')
 
     add_records(target_meets_ids)
 
 def routine(year=None, date_min=None, date_max=None):
-    # def add_meets(year, force=False):
-    # def add_records_wrapper(date_min, date_max):
-    # def opt_out_foreigners():
-    # def analyze_all(year):
     today = datetime.date.today()
 
     if year is None:
@@ -381,9 +388,9 @@ def routine(year=None, date_min=None, date_max=None):
 
 
 if __name__ == '__main__':
-# Base.metadata.drop_all(bind=engine)
-# Base.metadata.create_all(bind=engine)
-# initialize_stats_table()
+# ::Base.metadata.drop_all(bind=engine)
+# ::Base.metadata.create_all(bind=engine)
+# ::initialize_stats_table()
     args = sys.argv
     if len(args) == 1:
         routine()

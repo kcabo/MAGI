@@ -60,4 +60,10 @@ foreign_teams = [
     'KOREA',
     'THAILAND',
     'MEXICO',
+    'Gangwon',
+    'GUATEMARA',
+    'Guangdong',
+    'SEOUL',
+    'SWIMMONSTER',
+    'UCB',
 ]
