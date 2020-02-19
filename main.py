@@ -436,7 +436,7 @@ def add_first_swimmer_in_relay(target_meets_ids):
 def add_row_for_relay(relay, meet_id, swimmer_id):
     event = convert_relay_event(relay.event)
     laps_list = relay.laps.split(',')
-    if (lap_len:=len(laps_list) < 4:
+    if (lap_len:=len(laps_list)) < 4:
         notify_line(f'{relay.record_id}の第一泳者のタイムを特定できません')
         return 0
     else:
@@ -496,7 +496,7 @@ if __name__ == '__main__':
 # ::initialize_stats_table()
     args = sys.argv
     if len(args) == 1:
-        # routine()
+        routine()
         # print(convert_relay_event(178))
     else:
         target = args[1]
