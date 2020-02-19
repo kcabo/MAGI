@@ -509,5 +509,16 @@ if __name__ == '__main__':
             add_meets(int(args[2]))
         elif target == 'routine':
             routine(date_min=int(args[2]), date_max=int(args[3]))
+        elif target == 'relay':
+            target_meets = session.query(
+                    Meet.meet_id
+                ).filter(
+                    Meet.start >= 20190400,
+                    Meet.start <= 20200230
+                ).order_by(
+                    Meet.start
+                ).all()
+            target_meets_ids = [m.meet_id for m in target_meets]
+            add_first_swimmer_in_relay(target_meets_ids)
         else:
             print(args)
