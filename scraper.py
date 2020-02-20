@@ -39,7 +39,7 @@ def raw_timestr_to_timeval(time_str):
 
 # DOM探索木をURLから生成
 def make_soup(url):
-    sleep(0.1) # 負荷軽減用
+    sleep(1) # 負荷軽減用
     req = requests.get(url)
     req.encoding = "cp932"
     return BeautifulSoup(req.text, "lxml")
