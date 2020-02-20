@@ -365,6 +365,7 @@ def add_records_wrapper(date_min, date_max):
         notify_line(f'大会ID:{not_up_to_date}、記録未納の可能性あり。{count}件の記録を削除')
     # この時点でスクレイピングが必要な大会がわかるから、既にデータを追加した大会をtargetから省いてもいいのでは？
     add_records(target_meets_ids)
+    add_first_swimmer_in_relay(target_meets_ids)
 
 
 def add_first_swimmer_in_relay(target_meets_ids):
@@ -373,12 +374,11 @@ def add_first_swimmer_in_relay(target_meets_ids):
     record_length = 0 # 追加した行数
     skipped = 0 # 飛ばした種目数
 
-    for meet_id in Takenoko(target_meets_ids):
+    for meet_id in Takenoko(target_meets_ids, 50):
         first_swimmers = session.query(Record.record_id).filter_by(meet_id=meet_id, relay=1).all()
         if first_swimmers:
             skipped += 1 # その大会においては既に1泳者追加していた
         else:
-            only_relay_but_add = []
             relay_results = session.query(
                     Record.record_id,
                     Record.event,
@@ -393,10 +393,13 @@ def add_first_swimmer_in_relay(target_meets_ids):
                     ~Record.rank.in_(['失格','失格1泳者','棄権','途中棄権'])
                     # 2~4泳者の失格はよい あと失格、は誰が失格なのかわからないから一応除外
                 ).all()
-
+            only_relay_but_add = []
+            sub_count = 0
             for relay in relay_results:
                 swimmers = relay.name.split(',')
-                assert len(swimmers) == 4
+                if len(swimmers) == 1:
+                    notify_line(f'R1_INVALID: 無効なリレーオーダー({swimmers}) on {relay.record_id}')
+                    continue
                 first = swimmers[0]
                 # とりあえず同じ名前の人探す
                 candidates = session.query(Swimmer.swimmer_id).filter_by(name=first).all()
@@ -415,25 +418,28 @@ def add_first_swimmer_in_relay(target_meets_ids):
 
                     if (length := len(suggest_s_ids)) == 1:
                         # これは特定余裕 同じ大会内で同じ名前の選手が一人だけいた
-                        record_length += add_row_for_relay(relay, meet_id, suggest_s_ids[0])
+                        sub_count += add_row_for_relay(relay, meet_id, suggest_s_ids[0])
 
                     elif length == 0:
                         # 同一大会で出場なし
                         if len(candidates) == 1:
-                            record_length += add_row_for_relay(relay, meet_id, candidates[0])
+                            sub_count += add_row_for_relay(relay, meet_id, candidates[0])
                             only_relay_but_add.append(f'{first}, {relay.record_id}')
                         else:
-                            notify_line(f'この大会でリレーのみ出場の{first}には同姓同名がいます。{relay.record_id}の第一泳者を特定できません')
+                            notify_line(f'R1_INVALID: リレーのみ出場同姓同名({first}) on {relay.record_id}')
                     else:
                         # 同姓同名が同一大会で出場したため、リレー一泳が誰か特定不可
-                        notify_line(f'{first}が{meet_id}において二人います。{relay.record_id}の第一泳者を特定できません')
+                        notify_line(f'R1_INVALID: 同一大会内同姓同名({first}) on {relay.record_id}')
 
                 else: # 同じ名前の人がSwimmerテーブルに存在しない
-                    notify_line(f'{first}がテーブルに存在しません。{relay.record_id}の第一泳者を特定できません')
+                    notify_line(f'R1_INVALID: テーブルに存在しない名前({first}) on {relay.record_id}')
 
-            msg = ' '.join(only_relay_but_add)
-            notify_line(f'{meet_id}において、リレーのみ出場の選手かつ同姓同名なしで問題なしとしたのが以下。{msg}')
+            if only_relay_but_add:
+                msg = ' '.join(only_relay_but_add)
+                notify_line(f'{meet_id}において、リレーのみ出場の選手かつ同姓同名なしで問題なしとしたのが以下。{msg}')
             session.commit()
+            print(f'{meet_id}にて{sub_count}件追加')
+            record_length += sub_count
 
     notify_line(f'{record_length}件の第一泳者の記録を新規に保存。{skipped}大会をスキップ')
 
@@ -441,7 +447,7 @@ def add_row_for_relay(relay, meet_id, swimmer_id):
     event = convert_relay_event(relay.event)
     laps_list = relay.laps.split(',')
     if (lap_len:=len(laps_list)) < 4:
-        notify_line(f'{relay.record_id}の第一泳者のタイムを特定できません')
+        notify_line(f'R1_INVALID: 無効なタイム({laps_list}) on {relay.record_id}')
         return 0
     else:
         assert lap_len % 4 == 0
@@ -481,7 +487,7 @@ def routine(year=None, date_min=None, date_max=None):
         date_max = int(today.strftime('%Y%m%d'))
 
     if date_min is None:
-        day_range = 10
+        day_range = 7
         date_min_obj = today - datetime.timedelta(days=day_range)
         date_min = int(date_min_obj.strftime('%Y%m%d'))
 
@@ -514,9 +520,10 @@ if __name__ == '__main__':
                     Meet.meet_id
                 ).filter(
                     Meet.start >= 20190400,
-                    Meet.start <= 20200230
+                    Meet.start <= 20200999
                 ).order_by(
-                    Meet.start
+                    Meet.start,
+                    Meet.meet_id
                 ).all()
             target_meets_ids = [m.meet_id for m in target_meets]
             add_first_swimmer_in_relay(target_meets_ids)
